@@ -116,6 +116,27 @@ get_guest_seat(GuestId, [seat(GuestId, TableId, SeatId) | _], seat(GuestId, Tabl
 get_guest_seat(GuestId, [_|T], Seat):- get_guest_seat(GuestId, T, Seat).
 
 /*
+--- SORT GUESTs
+*/
+
+filter_list([], _, []):- !.
+filter_list([H | T1], FilterList, [H | T2]):- member(H, FilterList), !, filter_list(T1, FilterList, T2).
+filter_list([H | T1], FilterList, T2]):- filter_list(T1, FilterList, T2).
+
+lists_to_set(L1, [], L1):- !.
+lists_to_set(L1, [H | T], Set):- member(H, L1), lists_to_set(L1, T, Set), !.
+lists_to_set(L1, [H | T], Set):- append(L1, [H], L2), lists_to_set(L2, T, Set).
+
+
+lists_to_set([L|[]], L):- !.
+lists_to_set([L1 |[L2 | Lists]], Uniques):- lists_to_set(L1, L2, Temp), lists_to_set([Temp | Lists], Uniques).
+
+sort_guests(Guests, SortedGuests):- findall(NextTo, next_to(NextTo), AllNextTo), lists_to_set(AllNextTo, SortedGuestsTemp1),
+								    findall(SameTable, same_table(SameTable), AllSameTable), lists_to_set([SortedGuestsTemp1 | AllSameTable], SortedGuestsTemp2),
+								    lists_to_set([SortedGuestsTemp2 , Guests], SortedGuestsTemp3),
+								    filter_list(SortedGuestsTemp2, Guests, SortedGuests).
+
+/*
  --- SAME TABLE 
 */
 
@@ -247,7 +268,7 @@ seat_guests([GH | GT], TPSoFar, TP):- seat_guest(GH, TPSoFar, Seat),
 									  print_short_table_plan([Seat | TPSoFar]),
 									  seat_guests(GT, [Seat | TPSoFar], TP).
 
-seat_guests(Guests, TP):- tell('logs.txt'), seat_guests(Guests, [], TP), told.
+seat_guests(Guests, TP):- tell('logs.txt'), sort_guests(Guests, SortedGuests), seat_guests(SortedGuests, [], TP), told.
 
 
 /*
