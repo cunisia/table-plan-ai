@@ -108,9 +108,9 @@ find_guest_seat(GuestId, [seat(GuestId, TableId, SeatId) | _], seat(GuestId, Ta
 find_guest_seat(GuestId, [seat(GuestId2, _, _) | T], Seat):- not(GuestId = GuestId2), 
 															find_guest_seat(GuestId, T, Seat).
 
+find_guests_seat([GuestId | Guests], TP, Seats):- find_guest_seat(GuestId, TP, Seat), !, find_guests_seat(Guests, TP, Seats2), Seats = [Seat | Seats2].
+find_guests_seat([_ | Guests], TP, Seats):- find_guests_seat(Guests, TP, Seats), !.
 find_guests_seat([], _, []).
-find_guests_seat([GuestId | Guests], TP, [Seat|Seats]):- find_guest_seat(GuestId, TP, Seat), !, find_guests_seat(Guests, TP, Seats).
-find_guests_seat([_ | Guests], TP, Seats):- find_guests_seat(Guests, TP, Seats).
 
 get_guest_seat(GuestId, [seat(GuestId, TableId, SeatId) | _], seat(GuestId, TableId, SeatId)):- !.
 get_guest_seat(GuestId, [_|T], Seat):- get_guest_seat(GuestId, T, Seat).
@@ -121,7 +121,7 @@ get_guest_seat(GuestId, [_|T], Seat):- get_guest_seat(GuestId, T, Seat).
 
 filter_list([], _, []):- !.
 filter_list([H | T1], FilterList, [H | T2]):- member(H, FilterList), !, filter_list(T1, FilterList, T2).
-filter_list([H | T1], FilterList, T2]):- filter_list(T1, FilterList, T2).
+filter_list([_ | T1], FilterList, T2):- filter_list(T1, FilterList, T2).
 
 lists_to_set(L1, [], L1):- !.
 lists_to_set(L1, [H | T], Set):- member(H, L1), lists_to_set(L1, T, Set), !.
@@ -131,10 +131,11 @@ lists_to_set(L1, [H | T], Set):- append(L1, [H], L2), lists_to_set(L2, T, Set).
 lists_to_set([L|[]], L):- !.
 lists_to_set([L1 |[L2 | Lists]], Uniques):- lists_to_set(L1, L2, Temp), lists_to_set([Temp | Lists], Uniques).
 
-sort_guests(Guests, SortedGuests):- findall(NextTo, next_to(NextTo), AllNextTo), lists_to_set(AllNextTo, SortedGuestsTemp1),
-								    findall(SameTable, same_table(SameTable), AllSameTable), lists_to_set([SortedGuestsTemp1 | AllSameTable], SortedGuestsTemp2),
-								    lists_to_set([SortedGuestsTemp2 , Guests], SortedGuestsTemp3),
-								    filter_list(SortedGuestsTemp2, Guests, SortedGuests).
+sort_guests(Guests, SortedGuests):- findall(ExclusiveTable, exclusive_table(ExclusiveTable), AllExclusiveTable), lists_to_set(AllExclusiveTable, SortedGuestsTemp1),
+									findall(NextTo, next_to(NextTo), AllNextTo), lists_to_set([SortedGuestsTemp1 | AllNextTo], SortedGuestsTemp2),
+								    findall(SameTable, same_table(SameTable), AllSameTable), lists_to_set([SortedGuestsTemp2 | AllSameTable], SortedGuestsTemp3),
+								    lists_to_set([SortedGuestsTemp3 , Guests], SortedGuestsTemp4),
+								    filter_list(SortedGuestsTemp4, Guests, SortedGuests).
 
 /*
  --- SAME TABLE 
@@ -156,6 +157,28 @@ respect_same_table(GuestId, TableId, TablePlan, [SameTableHead | SameTableTail])
 respect_same_table(_, _, []):- !.
 respect_same_table(GuestId, TableId, TablePlan):- get_all_same_table_condition(GuestId, SameTable), 
 												  respect_same_table(GuestId, TableId, TablePlan, SameTable).
+
+/*
+--- HAVE EXCLUSIVE TABLE
+*/
+
+get_all_exclusive_table_condition(GuestId, AllExclusiveTable):- findall(ExclusiveTable, (exclusive_table(ExclusiveTable), member(GuestId, ExclusiveTable)), AllExclusiveTable).
+get_all_other_exclusive_table_condition(GuestId, OtherExclusiveTable):- findall(ExclusiveTable, (exclusive_table(ExclusiveTable), not(member(GuestId, ExclusiveTable))), OtherExclusiveTable).
+
+seats_not_at_table([], _):- !.
+seats_not_at_table([seat(_, TableId1, _) | T], TableId2):- TableId1 \= TableId2, seats_not_at_table(T, TableId2).
+
+respect_exclusive_table(_, _, _, []):- !.
+respect_exclusive_table(GuestId, TableId, TablePlan, [ExclusiveTableHead | ExclusiveTableTail]):- table(TableId, _),
+																								  find_guests_seat(ExclusiveTableHead, TablePlan, Seats),
+																								  seats_not_at_table(Seats, TableId), 
+																				   				  respect_exclusive_table(GuestId, TableId, TablePlan, ExclusiveTableTail). 
+
+respect_exclusive_table(_, _, []):- !.
+respect_exclusive_table(GuestId, TableId, TablePlan):- get_all_exclusive_table_condition(GuestId, ExclusiveTable), 
+													   respect_same_table(GuestId, TableId, TablePlan, ExclusiveTable),
+													   get_all_other_exclusive_table_condition(GuestId, OtherExclusiveTable), 
+													   respect_exclusive_table(GuestId, TableId, TablePlan, OtherExclusiveTable).
 
 /*
  --- FREE SEAT
@@ -256,7 +279,8 @@ respect_next_to(GuestId, TableId, SeatId, TP):- get_next_to_conditions_by_guest(
  --- SEAT GUESTs
 */
 
-seat_guest(GuestId, TP, seat(GuestId, TableId, SeatId)):- respect_next_to(GuestId, TableId, SeatId, TP),
+seat_guest(GuestId, TP, seat(GuestId, TableId, SeatId)):- respect_exclusive_table(GuestId, TableId, TP),
+														  respect_next_to(GuestId, TableId, SeatId, TP),
 														  respect_same_table(GuestId, TableId, TP),
 														  free_seat(TableId, SeatId, TP),
 														  % Can only check for enable_some_rule once we're sure TableId and SeatId are defined.
