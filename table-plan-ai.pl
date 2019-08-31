@@ -72,56 +72,56 @@ not_next_to([hf, rl]).
 */
 
 smaller_seat(seat(_, TableId1, SeatId1), seat(_, TableId2, SeatId2)):- not(var(TableId1)), 
-																	  not(var(SeatId1)), 
-																	  ((var(TableId2), !) ; var(SeatId2)).
+                                                                      not(var(SeatId1)), 
+                                                                      ((var(TableId2), !) ; var(SeatId2)).
 smaller_seat(seat(_, TableId1, _), seat(_, TableId2, _)):- not(var(TableId1)), 
-														   not(var(TableId2)), 
-														   TableId1 @< TableId2, !. %@< is to compare strings
+                                                           not(var(TableId2)), 
+                                                           TableId1 @< TableId2, !. %@< is to compare strings
 smaller_seat(seat(_, TableId1, SeatId1), seat(_, TableId2, SeatId2)):- not(var(TableId1)), 
-																	  not(var(TableId2)), 
-																	  not(var(SeatId1)), 
-																	  not(var(SeatId2)),
-																	  TableId1 = TableId2, 
-																	  SeatId1 < SeatId2. %@< is to compare strings
+                                                                      not(var(TableId2)), 
+                                                                      not(var(SeatId1)), 
+                                                                      not(var(SeatId2)),
+                                                                      TableId1 = TableId2, 
+                                                                      SeatId1 < SeatId2. %@< is to compare strings
 
 beg_smallest_seat([H|[]], [H]):- !.
 beg_smallest_seat([seat(GuestId, TableId, SeatId)|T], L):- beg_smallest_seat(T, [seat(GuestId2, TableId2, SeatId2)|T1]), 
-														  (
-														   	(
-														   		smaller_seat(seat(GuestId2, TableId2, SeatId2), seat(GuestId, TableId, SeatId)), !,
-													   			L = [seat(GuestId2, TableId2, SeatId2) | [seat(GuestId, TableId, SeatId) | T1]]
-													   		);
-														   	(
-														   		smaller_seat(seat(GuestId, TableId, SeatId), seat(GuestId2, TableId2, SeatId2)), !, 
-														     	L = [seat(GuestId, TableId, SeatId) | [seat(GuestId2, TableId2, SeatId2) | T1]]
-														    );
-														   	(
-											   					L = [seat(GuestId, TableId, SeatId) | [seat(GuestId2, TableId2, SeatId2) | T1]] % if non is smaller respect procided order
-													   	 	)
-														   ).
+                                                          (
+                                                               (
+                                                                   smaller_seat(seat(GuestId2, TableId2, SeatId2), seat(GuestId, TableId, SeatId)), !,
+                                                                   L = [seat(GuestId2, TableId2, SeatId2) | [seat(GuestId, TableId, SeatId) | T1]]
+                                                               );
+                                                               (
+                                                                   smaller_seat(seat(GuestId, TableId, SeatId), seat(GuestId2, TableId2, SeatId2)), !, 
+                                                                 L = [seat(GuestId, TableId, SeatId) | [seat(GuestId2, TableId2, SeatId2) | T1]]
+                                                            );
+                                                               (
+                                                                   L = [seat(GuestId, TableId, SeatId) | [seat(GuestId2, TableId2, SeatId2) | T1]] % if non is smaller respect procided order
+                                                                )
+                                                           ).
 
 beg_biggest_seat([H|[]], [H]):- !.
 beg_biggest_seat([seat(GuestId, TableId, SeatId)|T], L):- beg_biggest_seat(T, [seat(GuestId2, TableId2, SeatId2)|T1]), 
-														  (
-														   	(
-														   		smaller_seat(seat(GuestId2, TableId2, SeatId2), seat(GuestId, TableId, SeatId)), !,
-														     	L = [seat(GuestId, TableId, SeatId) | [seat(GuestId2, TableId2, SeatId2) | T1]]
-													   		);
-														   	(
-														   		smaller_seat(seat(GuestId, TableId, SeatId), seat(GuestId2, TableId2, SeatId2)), !, 
-													   			L = [seat(GuestId2, TableId2, SeatId2) | [seat(GuestId, TableId, SeatId) | T1]]
-														     );
-														   	(
-											   					L = [seat(GuestId, TableId, SeatId) | [seat(GuestId2, TableId2, SeatId2) | T1]] % if non is smaller respect procided order
-													   	 	)
-														   ).
+                                                          (
+                                                               (
+                                                                   smaller_seat(seat(GuestId2, TableId2, SeatId2), seat(GuestId, TableId, SeatId)), !,
+                                                                 L = [seat(GuestId, TableId, SeatId) | [seat(GuestId2, TableId2, SeatId2) | T1]]
+                                                               );
+                                                               (
+                                                                   smaller_seat(seat(GuestId, TableId, SeatId), seat(GuestId2, TableId2, SeatId2)), !, 
+                                                                   L = [seat(GuestId2, TableId2, SeatId2) | [seat(GuestId, TableId, SeatId) | T1]]
+                                                             );
+                                                               (
+                                                                   L = [seat(GuestId, TableId, SeatId) | [seat(GuestId2, TableId2, SeatId2) | T1]] % if non is smaller respect procided order
+                                                                )
+                                                           ).
 
 sort_guests_seat([H|[]], [H|[]]):- !.
 sort_guests_seat(Seats, [SmallestSeat | Ordered_Seats]):- beg_smallest_seat(Seats, [SmallestSeat| T]), sort_guests_seat(T,  Ordered_Seats).
 
 find_guest_seat(GuestId, [seat(GuestId, TableId, SeatId) | _], seat(GuestId, TableId, SeatId)).
 find_guest_seat(GuestId, [seat(GuestId2, _, _) | T], Seat):- not(GuestId = GuestId2), 
-															find_guest_seat(GuestId, T, Seat).
+                                                            find_guest_seat(GuestId, T, Seat).
 
 find_guests_seat([GuestId | Guests], TP, Seats):- find_guest_seat(GuestId, TP, Seat), !, find_guests_seat(Guests, TP, Seats2), Seats = [Seat | Seats2].
 find_guests_seat([_ | Guests], TP, Seats):- find_guests_seat(Guests, TP, Seats), !.
@@ -147,11 +147,11 @@ lists_to_set([L|[]], L):- !.
 lists_to_set([L1 |[L2 | Lists]], Uniques):- lists_to_set(L1, L2, Temp), lists_to_set([Temp | Lists], Uniques).
 
 sort_guests(Guests, SortedGuests):- findall(NextTo, next_to(NextTo), AllNextTo), lists_to_set(AllNextTo, SortedGuestsTemp1),
-									findall(NotNextTo, not_next_to(NotNextTo), AllNotNextTo), lists_to_set([SortedGuestsTemp1 | AllNotNextTo], SortedGuestsTemp2),
-								    findall(SameTable, same_table(SameTable), AllSameTable), lists_to_set([SortedGuestsTemp2 | AllSameTable], SortedGuestsTemp3),
-								    findall(ExclusiveTable, exclusive_table(ExclusiveTable), AllExclusiveTable), lists_to_set([SortedGuestsTemp3 | AllExclusiveTable], SortedGuestsTemp4),
-								    lists_to_set([SortedGuestsTemp4 , Guests], SortedGuestsTemp5),
-								    filter_list(SortedGuestsTemp5, Guests, SortedGuests).
+                                    findall(NotNextTo, not_next_to(NotNextTo), AllNotNextTo), lists_to_set([SortedGuestsTemp1 | AllNotNextTo], SortedGuestsTemp2),
+                                    findall(SameTable, same_table(SameTable), AllSameTable), lists_to_set([SortedGuestsTemp2 | AllSameTable], SortedGuestsTemp3),
+                                    findall(ExclusiveTable, exclusive_table(ExclusiveTable), AllExclusiveTable), lists_to_set([SortedGuestsTemp3 | AllExclusiveTable], SortedGuestsTemp4),
+                                    lists_to_set([SortedGuestsTemp4 , Guests], SortedGuestsTemp5),
+                                    filter_list(SortedGuestsTemp5, Guests, SortedGuests).
 
 /*
  --- SAME TABLE 
@@ -164,12 +164,12 @@ get_same_table_condition_by_guest(GuestId, L):- findall(LL, (same_table(LL), mem
 
 respect_same_table(_, _, _, []):- !.
 respect_same_table(GuestId, TableId, TP, [SameTableHead | SameTableTail]):- find_guests_seat(SameTableHead, TP, Seats),
-																			belong_to_same_table([seat(GuestId, TableId, nil) | Seats]),
-																	  	    respect_same_table(GuestId, TableId, TP, SameTableTail).
+                                                                            belong_to_same_table([seat(GuestId, TableId, nil) | Seats]),
+                                                                              respect_same_table(GuestId, TableId, TP, SameTableTail).
 
 respect_same_table(_, _, []):- !.
 respect_same_table(GuestId, TableId, TP):- get_same_table_condition_by_guest(GuestId, SameTable), 
-										   respect_same_table(GuestId, TableId, TP, SameTable).
+                                           respect_same_table(GuestId, TableId, TP, SameTable).
 
 /*
 --- HAVE EXCLUSIVE TABLE
@@ -183,9 +183,9 @@ seats_not_at_table([seat(_, TableId1, _) | T], TableId2):- TableId1 \= TableId2
 
 respect_other_exclusive_table(_, _, _, []):- !.
 respect_other_exclusive_table(GuestId, TableId, TP, [ExclusiveTableHead | ExclusiveTableTail]):- table(TableId, _),
-																								 find_guests_seat(ExclusiveTableHead, TP, Seats),
-																								 seats_not_at_table(Seats, TableId), 
-																				   				 respect_other_exclusive_table(GuestId, TableId, TP, ExclusiveTableTail). 
+                                                                                                 find_guests_seat(ExclusiveTableHead, TP, Seats),
+                                                                                                 seats_not_at_table(Seats, TableId), 
+                                                                                                 respect_other_exclusive_table(GuestId, TableId, TP, ExclusiveTableTail). 
 
 nb_guests_at_table(_, [], 0):- !.
 nb_guests_at_table(TableId, [seat(_, TableId2, _) | T], NB):- TableId2 = TableId, !, nb_guests_at_table(TableId, T, NB2), NB is NB2 + 1.
@@ -193,17 +193,17 @@ nb_guests_at_table(TableId, [_ | T], NB):- nb_guests_at_table(TableId, T, NB).
 
 respect_exclusive_table(_, _, _, []):- !.
 respect_exclusive_table(GuestId, TableId, TP, [ExclusiveTableHead | ExclusiveTableTail]):- find_guests_seat(ExclusiveTableHead, TP, [H|T]), !,
-																						    belong_to_same_table([seat(GuestId, TableId, nil) | [H|T]]),
-																							respect_exclusive_table(GuestId, TableId, TP, ExclusiveTableTail).
+                                                                                            belong_to_same_table([seat(GuestId, TableId, nil) | [H|T]]),
+                                                                                            respect_exclusive_table(GuestId, TableId, TP, ExclusiveTableTail).
 respect_exclusive_table(GuestId, TableId, TP, [_ | ExclusiveTableTail]):- table(TableId, _), 
-																		  nb_guests_at_table(TableId, TP, 0),
-																		  respect_exclusive_table(GuestId, TableId, TP, ExclusiveTableTail).
+                                                                          nb_guests_at_table(TableId, TP, 0),
+                                                                          respect_exclusive_table(GuestId, TableId, TP, ExclusiveTableTail).
 
 respect_exclusive_table(_, _, []):- !.
 respect_exclusive_table(GuestId, TableId, TP):- get_exclusive_table_condition_by_guest(GuestId, ExclusiveTable), 
-												respect_exclusive_table(GuestId, TableId, TP, ExclusiveTable),
-												get_all_other_exclusive_table_condition(GuestId, OtherExclusiveTable), 
-												respect_other_exclusive_table(GuestId, TableId, TP, OtherExclusiveTable).
+                                                respect_exclusive_table(GuestId, TableId, TP, ExclusiveTable),
+                                                get_all_other_exclusive_table_condition(GuestId, OtherExclusiveTable), 
+                                                respect_other_exclusive_table(GuestId, TableId, TP, OtherExclusiveTable).
 
 /*
  --- FREE SEAT
@@ -212,8 +212,8 @@ respect_exclusive_table(GuestId, TableId, TP):- get_exclusive_table_condition_by
 % free_seat(seat(GuestId, TableId, SeatId), TablePlan): check if a seat is not already taken
 free_seat(TableId, SeatId, []):- seat(TableId, SeatId), !.
 free_seat(TableId, SeatId, [seat(_, TableId2, SeatId2) | T]):-  seat(TableId, SeatId),
-																not((TableId = TableId2, SeatId = SeatId2)), 
-																free_seat(TableId, SeatId, T). 
+                                                                not((TableId = TableId2, SeatId = SeatId2)), 
+                                                                free_seat(TableId, SeatId, T). 
 
 /*
  --- NEXT TO
@@ -229,25 +229,25 @@ previous_seat_id(TableId, _, PreviousSeatId):- table(TableId, Size), PreviousSea
 
 
 nb_appended_free_seats_right(TP, seat(_, TableId, SeatId), SoFar, NbAppendedFreeSeats):- next_seat_id(TableId, SeatId, NextSeatId), 
-																					 free_seat(TableId, NextSeatId, TP), !,
-																					 NewSoFar is SoFar + 1,
-																					 nb_appended_free_seats_right(TP, seat("", TableId, NextSeatId), NewSoFar, NbAppendedFreeSeats).
+                                                                                     free_seat(TableId, NextSeatId, TP), !,
+                                                                                     NewSoFar is SoFar + 1,
+                                                                                     nb_appended_free_seats_right(TP, seat("", TableId, NextSeatId), NewSoFar, NbAppendedFreeSeats).
 
 nb_appended_free_seats_right(TP, seat(_, TableId, SeatId), SoFar, NbAppendedFreeSeats):- next_seat_id(TableId, SeatId, NextSeatId), 
-																					 not(free_seat(TableId, NextSeatId, TP)), 
-																					 NbAppendedFreeSeats is SoFar, !.
+                                                                                     not(free_seat(TableId, NextSeatId, TP)), 
+                                                                                     NbAppendedFreeSeats is SoFar, !.
 
 nb_appended_free_seats_right(TP, Seat, NbAppendedFreeSeats):- nb_appended_free_seats_right(TP, Seat, 0, NbAppendedFreeSeats).
 
 
 nb_appended_free_seats_left(TP, seat(_, TableId, SeatId), SoFar, NbAppendedFreeSeats):- previous_seat_id(TableId, SeatId, PreviousSeatId), 
-																					 free_seat(TableId, PreviousSeatId, TP), !,
-																					 NewSoFar is SoFar + 1,
-																					 nb_appended_free_seats_left(TP, seat("", TableId, PreviousSeatId), NewSoFar, NbAppendedFreeSeats).
+                                                                                     free_seat(TableId, PreviousSeatId, TP), !,
+                                                                                     NewSoFar is SoFar + 1,
+                                                                                     nb_appended_free_seats_left(TP, seat("", TableId, PreviousSeatId), NewSoFar, NbAppendedFreeSeats).
 
 nb_appended_free_seats_left(TP, seat(_, TableId, SeatId), SoFar, NbAppendedFreeSeats):- previous_seat_id(TableId, SeatId, PreviousSeatId), 
-																					 not(free_seat(TableId, PreviousSeatId, TP)), 
-																					 NbAppendedFreeSeats is SoFar, !.
+                                                                                     not(free_seat(TableId, PreviousSeatId, TP)), 
+                                                                                     NbAppendedFreeSeats is SoFar, !.
 
 nb_appended_free_seats_left(TP, Seat, NbAppendedFreeSeats):- nb_appended_free_seats_left(TP, Seat, 0, NbAppendedFreeSeats). 
 
@@ -257,26 +257,26 @@ enough_appended_free_seats(TP, Seats, NbNonSeated):- beg_smallest_seat(Seats, [S
 enable_next_to_condition(_, _, _, _, _, []):- !.
 enable_next_to_condition(_, TableId, _, _, _, [seat(_, TableId2, _)]):- TableId \= TableId2, !.
 enable_next_to_condition(GuestId, TableId, SeatId, TP, NextToCondition, Seats):- length(Seats, NbSeated),
-																				 length(NextToCondition, L), 
-																				 NbNonSeated is L - NbSeated,
-																				 enough_appended_free_seats([seat(GuestId, TableId, SeatId) | TP], Seats, NbNonSeated).
+                                                                                 length(NextToCondition, L), 
+                                                                                 NbNonSeated is L - NbSeated,
+                                                                                 enough_appended_free_seats([seat(GuestId, TableId, SeatId) | TP], Seats, NbNonSeated).
 
 enable_next_to_condition(GuestId, TableId, SeatId, TP, NextToCondition):- find_guests_seat(NextToCondition, TP, Seats),
-																		  enable_next_to_condition(GuestId, TableId, SeatId, TP, NextToCondition, Seats).
+                                                                          enable_next_to_condition(GuestId, TableId, SeatId, TP, NextToCondition, Seats).
 
 enable_other_next_to(_, _, _, _, []).
 enable_other_next_to(GuestId, TableId, SeatId, TP, [NextToCondition | OtherNextTo]):- enable_next_to_condition(GuestId, TableId, SeatId, TP, NextToCondition),
-																				      enable_other_next_to(GuestId, TableId, SeatId, TP, OtherNextTo).
+                                                                                      enable_other_next_to(GuestId, TableId, SeatId, TP, OtherNextTo).
 
 enable_other_next_to(GuestId, TableId, SeatId, TP):- get_other_next_to_conditions(GuestId, OtherNextTo),
-		   											 enable_other_next_to(GuestId, TableId, SeatId, TP, OtherNextTo).
+                                                        enable_other_next_to(GuestId, TableId, SeatId, TP, OtherNextTo).
 
 % --- Find a set respecting nextos
 
 follow_each_other(S1, S2):- beg_smallest_seat([S1, S2], [seat(_, TableId1, SeatId1), seat(_, TableId2, SeatId2)]),
-							TableId1 = TableId2, 
-							next_seat_id(TableId1, SeatId1, NextSeatId),
-							NextSeatId = SeatId2.
+                            TableId1 = TableId2, 
+                            next_seat_id(TableId1, SeatId1, NextSeatId),
+                            NextSeatId = SeatId2.
 
 get_next_to_conditions_by_guest(GuestId, AllNextTo):- findall(NextTo, (next_to(NextTo), member(GuestId, NextTo)), AllNextTo).
 
@@ -285,17 +285,17 @@ get_other_next_to_conditions(GuestId, OtherNextTo):- findall(NextTo, (next_to(Ne
 % This function considers that Seats are already following each others
 respect_next_to_seats(_, []):- !.
 respect_next_to_seats(Seat, Seats):- beg_biggest_seat(Seats, [BiggestSeat | _]),
-						 			 follow_each_other(Seat, BiggestSeat), !.
+                                      follow_each_other(Seat, BiggestSeat), !.
 respect_next_to_seats(Seat, Seats):- beg_smallest_seat(Seats, [SmallestSeat | _]),
-									 follow_each_other(Seat, SmallestSeat), !.
+                                     follow_each_other(Seat, SmallestSeat), !.
 
 respect_next_to(_, _, _, _, []):- !.
 respect_next_to(GuestId, TableId, SeatId, TP, [AllNextTo_H | AllNextTo_T]):- find_guests_seat(AllNextTo_H, TP, Seats),
-																			 respect_next_to_seats(seat(GuestId, TableId, SeatId), Seats),
-																			 respect_next_to(GuestId, TableId, SeatId, TP, AllNextTo_T).
+                                                                             respect_next_to_seats(seat(GuestId, TableId, SeatId), Seats),
+                                                                             respect_next_to(GuestId, TableId, SeatId, TP, AllNextTo_T).
 respect_next_to(_, _, _, []):- !.
 respect_next_to(GuestId, TableId, SeatId, TP):- get_next_to_conditions_by_guest(GuestId, AllNextTo), 
-												respect_next_to(GuestId, TableId, SeatId, TP, AllNextTo).
+                                                respect_next_to(GuestId, TableId, SeatId, TP, AllNextTo).
 
 % --- No next to 
 
@@ -306,12 +306,12 @@ not_next_to_seats(Seat, [Seat_H | Seats_T]):- not(follow_each_other(Seat_H, Sea
 
 respect_not_next_to(_, _, _, _, []):- !.
 respect_not_next_to(GuestId, TableId, SeatId, TP, [AllNotNextTo_H | AllNotNextTo_T]):- find_guests_seat(AllNotNextTo_H, TP, Seats),
-																					   not_next_to_seats(seat(GuestId, TableId, SeatId), Seats), 
-																  					   respect_not_next_to(GuestId, TableId, SeatId, TP, AllNotNextTo_T).
+                                                                                       not_next_to_seats(seat(GuestId, TableId, SeatId), Seats), 
+                                                                                         respect_not_next_to(GuestId, TableId, SeatId, TP, AllNotNextTo_T).
 
 respect_not_next_to(_, _, _, []):- !.
 respect_not_next_to(GuestId, TableId, SeatId, TP):- get_not_next_to_conditions_by_guest(GuestId, AllNotNextTo), 
-													respect_not_next_to(GuestId, TableId, SeatId, TP, AllNotNextTo).
+                                                    respect_not_next_to(GuestId, TableId, SeatId, TP, AllNotNextTo).
 
 
 /*
@@ -319,32 +319,32 @@ respect_not_next_to(GuestId, TableId, SeatId, TP):- get_not_next_to_conditions_b
 */
 
 seat_guest(GuestId, TP, seat(GuestId, TableId, SeatId)):- respect_next_to(GuestId, TableId, SeatId, TP),
-														  respect_same_table(GuestId, TableId, TP),
-														  respect_exclusive_table(GuestId, TableId, TP),
-														  free_seat(TableId, SeatId, TP),
-														  % Can only check for enable_some_rule once we're sure TableId and SeatId are defined.
-														  respect_not_next_to(GuestId, TableId, SeatId, TP),
-														  enable_other_next_to(GuestId, TableId, SeatId, TP). 
+                                                          respect_same_table(GuestId, TableId, TP),
+                                                          respect_exclusive_table(GuestId, TableId, TP),
+                                                          free_seat(TableId, SeatId, TP),
+                                                          % Can only check for enable_some_rule once we're sure TableId and SeatId are defined.
+                                                          respect_not_next_to(GuestId, TableId, SeatId, TP),
+                                                          enable_other_next_to(GuestId, TableId, SeatId, TP). 
 
 seat_guests([], TPSoFar, TPSoFar).
 seat_guests([GH | GT], TPSoFar, TP):- seat_guest(GH, TPSoFar, Seat), 
-									  %print_seat(Seat),
-									  print_short_table_plan([Seat | TPSoFar]),
-									  seat_guests(GT, [Seat | TPSoFar], TP).
+                                      %print_seat(Seat),
+                                      print_short_table_plan([Seat | TPSoFar]),
+                                      seat_guests(GT, [Seat | TPSoFar], TP).
 
 seat_guests(Guests, TP):- tell('logs.txt'), 
-						  sort_guests(Guests, SortedGuests), 
-						  seat_guests(SortedGuests, [], TP), 
-						  told.
+                          sort_guests(Guests, SortedGuests), 
+                          seat_guests(SortedGuests, [], TP), 
+                          told.
 
 /*
  --- PRINT TABLE PLAN
-*/	
+*/    
 
 list_table_seats(_, 0, []).
 list_table_seats(TableId, Size, [seat(TableId, Size) | T]):- Size > 0, 
-															 	NewSize is Size - 1,
-															 	list_table_seats(TableId, NewSize, T).
+                                                                 NewSize is Size - 1,
+                                                                 list_table_seats(TableId, NewSize, T).
 list_table_seats(TableId, L):- table(TableId, Size), list_table_seats(TableId, Size, L).
 
 list_all_seats(L):- findall(LL, (table(TableId, _), list_table_seats(TableId, LL)), L).
@@ -364,22 +364,22 @@ get_all_printable_table_plan(TP, PTPs):- list_all_seats(SGBT), get_all_printable
 print_seat(seat(GuestId, TableId, SeatId)):- nl, write(GuestId), write(': '), write(TableId), write(' - '), write(SeatId).
 
 print_seats([seat(GuestId, _, SeatId) | T]):- nl,
-										      write("#"), write(SeatId), write(": "), write(GuestId),
-										      print_seats(T).
+                                              write("#"), write(SeatId), write(": "), write(GuestId),
+                                              print_seats(T).
 print_seats([]).
 
 print([[seat(GuestId, TableId, SeatId) | T2]|T]):- nl, 
-									  write("---"), write(TableId), write("---"), 
-									  print_seats([seat(GuestId, TableId, SeatId) | T2]),
-									  print(T).
+                                      write("---"), write(TableId), write("---"), 
+                                      print_seats([seat(GuestId, TableId, SeatId) | T2]),
+                                      print(T).
 print([]).
 
 print_table_plan(TP):- get_all_printable_table_plan(TP, PTPs), print(PTPs).
 
 write_short_table_plan([]).
 write_short_table_plan([seat(GuestId, TableId, SeatId) | T]):- guest_num(GuestId, GuestNum), 
-															   table_num(TableId, TableNum), 
-															   write('('),write(GuestNum), write(', '), write(TableNum), write(', '), write(SeatId), write(') '),
-															   write_short_table_plan(T). 
+                                                               table_num(TableId, TableNum), 
+                                                               write('('),write(GuestNum), write(', '), write(TableNum), write(', '), write(SeatId), write(') '),
+                                                               write_short_table_plan(T). 
 
 print_short_table_plan(L):- nl, reverse(L, L1), write_short_table_plan(L1).
