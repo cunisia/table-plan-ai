@@ -146,11 +146,12 @@ lists_to_set(L1, [H | T], Set):- append(L1, [H], L2), lists_to_set(L2, T, Set).
 lists_to_set([L|[]], L):- !.
 lists_to_set([L1 |[L2 | Lists]], Uniques):- lists_to_set(L1, L2, Temp), lists_to_set([Temp | Lists], Uniques).
 
-sort_guests(Guests, SortedGuests):- findall(ExclusiveTable, exclusive_table(ExclusiveTable), AllExclusiveTable), lists_to_set(AllExclusiveTable, SortedGuestsTemp1),
-									findall(NextTo, next_to(NextTo), AllNextTo), lists_to_set([SortedGuestsTemp1 | AllNextTo], SortedGuestsTemp2),
+sort_guests(Guests, SortedGuests):- findall(NextTo, next_to(NextTo), AllNextTo), lists_to_set(AllNextTo, SortedGuestsTemp1),
+									findall(NotNextTo, not_next_to(NotNextTo), AllNotNextTo), lists_to_set([SortedGuestsTemp1 | AllNotNextTo], SortedGuestsTemp2),
 								    findall(SameTable, same_table(SameTable), AllSameTable), lists_to_set([SortedGuestsTemp2 | AllSameTable], SortedGuestsTemp3),
-								    lists_to_set([SortedGuestsTemp3 , Guests], SortedGuestsTemp4),
-								    filter_list(SortedGuestsTemp4, Guests, SortedGuests).
+								    findall(ExclusiveTable, exclusive_table(ExclusiveTable), AllExclusiveTable), lists_to_set([SortedGuestsTemp3 | AllExclusiveTable], SortedGuestsTemp4),
+								    lists_to_set([SortedGuestsTemp4 , Guests], SortedGuestsTemp5),
+								    filter_list(SortedGuestsTemp5, Guests, SortedGuests).
 
 /*
  --- SAME TABLE 
@@ -159,41 +160,50 @@ sort_guests(Guests, SortedGuests):- findall(ExclusiveTable, exclusive_table(Excl
 belong_to_same_table([_|[]]):- !.
 belong_to_same_table([seat(_, TableId, _) | [seat(_, TableId, _) | T]]):- belong_to_same_table([seat(_, TableId, _) | T]).
 
-same_table_as_guests(GuestId, TableId, Guests, TablePlan):- find_guests_seat(Guests, TablePlan, Seats), belong_to_same_table([seat(GuestId, TableId, nil) | Seats]).
-
-get_same_table_condition(GuestId, L):- same_table(L), member(GuestId, L).
-
-get_all_same_table_condition(GuestId, L):- findall(LL, get_same_table_condition(GuestId, LL), L).
+get_same_table_condition_by_guest(GuestId, L):- findall(LL, (same_table(LL), member(GuestId, LL)), L).
 
 respect_same_table(_, _, _, []):- !.
-respect_same_table(GuestId, TableId, TablePlan, [SameTableHead | SameTableTail]):- same_table_as_guests(GuestId, TableId, SameTableHead, TablePlan), 
-																				   respect_same_table(GuestId, TableId, TablePlan, SameTableTail).
+respect_same_table(GuestId, TableId, TP, [SameTableHead | SameTableTail]):- find_guests_seat(SameTableHead, TP, Seats),
+																			belong_to_same_table([seat(GuestId, TableId, nil) | Seats]),
+																	  	    respect_same_table(GuestId, TableId, TP, SameTableTail).
 
 respect_same_table(_, _, []):- !.
-respect_same_table(GuestId, TableId, TablePlan):- get_all_same_table_condition(GuestId, SameTable), 
-												  respect_same_table(GuestId, TableId, TablePlan, SameTable).
+respect_same_table(GuestId, TableId, TP):- get_same_table_condition_by_guest(GuestId, SameTable), 
+										   respect_same_table(GuestId, TableId, TP, SameTable).
 
 /*
 --- HAVE EXCLUSIVE TABLE
 */
 
-get_all_exclusive_table_condition(GuestId, AllExclusiveTable):- findall(ExclusiveTable, (exclusive_table(ExclusiveTable), member(GuestId, ExclusiveTable)), AllExclusiveTable).
+get_exclusive_table_condition_by_guest(GuestId, AllExclusiveTable):- findall(ExclusiveTable, (exclusive_table(ExclusiveTable), member(GuestId, ExclusiveTable)), AllExclusiveTable).
 get_all_other_exclusive_table_condition(GuestId, OtherExclusiveTable):- findall(ExclusiveTable, (exclusive_table(ExclusiveTable), not(member(GuestId, ExclusiveTable))), OtherExclusiveTable).
 
 seats_not_at_table([], _):- !.
 seats_not_at_table([seat(_, TableId1, _) | T], TableId2):- TableId1 \= TableId2, seats_not_at_table(T, TableId2).
 
+respect_other_exclusive_table(_, _, _, []):- !.
+respect_other_exclusive_table(GuestId, TableId, TP, [ExclusiveTableHead | ExclusiveTableTail]):- table(TableId, _),
+																								 find_guests_seat(ExclusiveTableHead, TP, Seats),
+																								 seats_not_at_table(Seats, TableId), 
+																				   				 respect_other_exclusive_table(GuestId, TableId, TP, ExclusiveTableTail). 
+
+nb_guests_at_table(_, [], 0):- !.
+nb_guests_at_table(TableId, [seat(_, TableId2, _) | T], NB):- TableId2 = TableId, !, nb_guests_at_table(TableId, T, NB2), NB is NB2 + 1.
+nb_guests_at_table(TableId, [_ | T], NB):- nb_guests_at_table(TableId, T, NB).
+
 respect_exclusive_table(_, _, _, []):- !.
-respect_exclusive_table(GuestId, TableId, TablePlan, [ExclusiveTableHead | ExclusiveTableTail]):- table(TableId, _),
-																								  find_guests_seat(ExclusiveTableHead, TablePlan, Seats),
-																								  seats_not_at_table(Seats, TableId), 
-																				   				  respect_exclusive_table(GuestId, TableId, TablePlan, ExclusiveTableTail). 
+respect_exclusive_table(GuestId, TableId, TP, [ExclusiveTableHead | ExclusiveTableTail]):- find_guests_seat(ExclusiveTableHead, TP, [H|T]), !,
+																						    belong_to_same_table([seat(GuestId, TableId, nil) | [H|T]]),
+																							respect_exclusive_table(GuestId, TableId, TP, ExclusiveTableTail).
+respect_exclusive_table(GuestId, TableId, TP, [_ | ExclusiveTableTail]):- table(TableId, _), 
+																		  nb_guests_at_table(TableId, TP, 0),
+																		  respect_exclusive_table(GuestId, TableId, TP, ExclusiveTableTail).
 
 respect_exclusive_table(_, _, []):- !.
-respect_exclusive_table(GuestId, TableId, TablePlan):- get_all_exclusive_table_condition(GuestId, ExclusiveTable), 
-													   respect_same_table(GuestId, TableId, TablePlan, ExclusiveTable),
-													   get_all_other_exclusive_table_condition(GuestId, OtherExclusiveTable), 
-													   respect_exclusive_table(GuestId, TableId, TablePlan, OtherExclusiveTable).
+respect_exclusive_table(GuestId, TableId, TP):- get_exclusive_table_condition_by_guest(GuestId, ExclusiveTable), 
+												respect_exclusive_table(GuestId, TableId, TP, ExclusiveTable),
+												get_all_other_exclusive_table_condition(GuestId, OtherExclusiveTable), 
+												respect_other_exclusive_table(GuestId, TableId, TP, OtherExclusiveTable).
 
 /*
  --- FREE SEAT
