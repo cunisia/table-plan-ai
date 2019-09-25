@@ -37,10 +37,12 @@ guest_num(gc, 10).
 table(main, 5).
 table(t1, 5).
 table(t2, 5).
+table(t3, 5).
 
 table_num(main, 1).
 table_num(t1, 2).
 table_num(t2, 3).
+table_num(t3, 4).
 
 seat(main, 1).
 seat(main, 2).
@@ -60,10 +62,16 @@ seat(t2, 3).
 seat(t2, 4).
 seat(t2, 5).
 
+seat(t3, 1).
+seat(t3, 2).
+seat(t3, 3).
+seat(t3, 4).
+seat(t3, 5).
 
 same_table([pc, gc, hf, mc, rl]).
 same_table([pg, ds]).
 next_to([pc, gc]).
+different_table([tj, pg]).
 exclusive_table([rc, abc]).
 not_next_to([hf, rl]).
 specific_table([gc, pc], t1).
@@ -152,8 +160,9 @@ sort_guests(Guests, SortedGuests):- findall(NextTo, next_to(NextTo), AllNextTo),
                                     findall(SpecificTable, specific_table(SpecificTable, _), AllSpecificTable), lists_to_set([SortedGuestsTemp2 | AllSpecificTable], SortedGuestsTemp3),
                                     findall(SameTable, same_table(SameTable), AllSameTable), lists_to_set([SortedGuestsTemp3 | AllSameTable], SortedGuestsTemp4),
                                     findall(ExclusiveTable, exclusive_table(ExclusiveTable), AllExclusiveTable), lists_to_set([SortedGuestsTemp4 | AllExclusiveTable], SortedGuestsTemp5),
-                                    lists_to_set([SortedGuestsTemp5 , Guests], SortedGuestsTemp6),
-                                    filter_list(SortedGuestsTemp6, Guests, SortedGuests).
+                                    findall(DifferentTable, different_table(DifferentTable), AllDifferentTable), lists_to_set([SortedGuestsTemp5 | AllDifferentTable], SortedGuestsTemp6),
+                                    lists_to_set([SortedGuestsTemp6 , Guests], SortedGuestsTemp7),
+                                    filter_list(SortedGuestsTemp7, Guests, SortedGuests).
 
 /*
  --- SAME TABLE 
@@ -172,6 +181,26 @@ respect_same_table(GuestId, TableId, TP, [SameTableHead | SameTableTail]):- find
 respect_same_table(_, _, []):- !.
 respect_same_table(GuestId, TableId, TP):- get_same_table_condition_by_guest(GuestId, SameTable), 
                                            respect_same_table(GuestId, TableId, TP, SameTable).
+
+/*
+--- DIFFERENT TABLE
+*/
+get_different_table_condition_by_guest(GuestId, DifferentTable):- findall(Guests, (different_table(Guests), member(GuestId, Guests)), DifferentTable).
+
+belong_to_different_table(_, []):-!.
+belong_to_different_table(seat(GuestId1, TableId1, _), [seat(_, TableId2, _) | Seats]):- TableId1 \= TableId2, !, 
+                                                                                         belong_to_different_table(seat(GuestId1, TableId1, _), Seats).
+belong_to_different_table(seat(GuestId1, TableId1, _), [seat(GuestId2, _, _) | Seats]):- GuestId1 = GuestId2, !, 
+                                                                                         belong_to_different_table(seat(GuestId1, TableId1, _), Seats).
+
+respect_different_table(_, _, _, []):-!. 
+respect_different_table(GuestId, TableId, TP, [DifferentTable_H |DifferentTable_T]):- find_guests_seat(DifferentTable_H, TP, Seats),
+                                                                                       belong_to_different_table(seat(GuestId, TableId, nil), Seats),
+                                                                                       respect_different_table(GuestId, TableId, TP, DifferentTable_T). 
+
+respect_different_table(_, _, []):-!.
+respect_different_table(GuestId, TableId, TP):- get_different_table_condition_by_guest(GuestId, DifferentTable),
+                                               respect_different_table(GuestId, TableId, TP, DifferentTable).
 
 /*
 --- HAVE EXCLUSIVE TABLE
@@ -338,6 +367,7 @@ seat_guest(GuestId, TP, seat(GuestId, TableId, SeatId)):- respect_specific_table
                                                           free_seat(TableId, SeatId, TP),
                                                           % Can only check for enable_some_rule once we're sure TableId and SeatId are defined.
                                                           respect_not_next_to(GuestId, TableId, SeatId, TP),
+                                                          respect_different_table(GuestId, TableId, TP),
                                                           enable_other_next_to(GuestId, TableId, SeatId, TP). 
 
 seat_guests([], TPSoFar, TPSoFar).
