@@ -66,6 +66,7 @@ same_table([pg, ds]).
 next_to([pc, gc]).
 exclusive_table([rc, abc]).
 not_next_to([hf, rl]).
+specific_table([gc, pc], t1).
 
 /*
  --- UTILs
@@ -148,10 +149,11 @@ lists_to_set([L1 |[L2 | Lists]], Uniques):- lists_to_set(L1, L2, Temp), lists_t
 
 sort_guests(Guests, SortedGuests):- findall(NextTo, next_to(NextTo), AllNextTo), lists_to_set(AllNextTo, SortedGuestsTemp1),
                                     findall(NotNextTo, not_next_to(NotNextTo), AllNotNextTo), lists_to_set([SortedGuestsTemp1 | AllNotNextTo], SortedGuestsTemp2),
-                                    findall(SameTable, same_table(SameTable), AllSameTable), lists_to_set([SortedGuestsTemp2 | AllSameTable], SortedGuestsTemp3),
-                                    findall(ExclusiveTable, exclusive_table(ExclusiveTable), AllExclusiveTable), lists_to_set([SortedGuestsTemp3 | AllExclusiveTable], SortedGuestsTemp4),
-                                    lists_to_set([SortedGuestsTemp4 , Guests], SortedGuestsTemp5),
-                                    filter_list(SortedGuestsTemp5, Guests, SortedGuests).
+                                    findall(SpecificTable, specific_table(SpecificTable, _), AllSpecificTable), lists_to_set([SortedGuestsTemp2 | AllSpecificTable], SortedGuestsTemp3),
+                                    findall(SameTable, same_table(SameTable), AllSameTable), lists_to_set([SortedGuestsTemp3 | AllSameTable], SortedGuestsTemp4),
+                                    findall(ExclusiveTable, exclusive_table(ExclusiveTable), AllExclusiveTable), lists_to_set([SortedGuestsTemp4 | AllExclusiveTable], SortedGuestsTemp5),
+                                    lists_to_set([SortedGuestsTemp5 , Guests], SortedGuestsTemp6),
+                                    filter_list(SortedGuestsTemp6, Guests, SortedGuests).
 
 /*
  --- SAME TABLE 
@@ -271,7 +273,7 @@ enable_other_next_to(GuestId, TableId, SeatId, TP, [NextToCondition | OtherNextT
 enable_other_next_to(GuestId, TableId, SeatId, TP):- get_other_next_to_conditions(GuestId, OtherNextTo),
                                                         enable_other_next_to(GuestId, TableId, SeatId, TP, OtherNextTo).
 
-% --- Find a set respecting nextos
+% --- Find a seat respecting nextos
 
 follow_each_other(S1, S2):- beg_smallest_seat([S1, S2], [seat(_, TableId1, SeatId1), seat(_, TableId2, SeatId2)]),
                             TableId1 = TableId2, 
@@ -307,18 +309,30 @@ not_next_to_seats(Seat, [Seat_H | Seats_T]):- not(follow_each_other(Seat_H, Sea
 respect_not_next_to(_, _, _, _, []):- !.
 respect_not_next_to(GuestId, TableId, SeatId, TP, [AllNotNextTo_H | AllNotNextTo_T]):- find_guests_seat(AllNotNextTo_H, TP, Seats),
                                                                                        not_next_to_seats(seat(GuestId, TableId, SeatId), Seats), 
-                                                                                         respect_not_next_to(GuestId, TableId, SeatId, TP, AllNotNextTo_T).
+                                                                                       respect_not_next_to(GuestId, TableId, SeatId, TP, AllNotNextTo_T).
 
 respect_not_next_to(_, _, _, []):- !.
 respect_not_next_to(GuestId, TableId, SeatId, TP):- get_not_next_to_conditions_by_guest(GuestId, AllNotNextTo), 
                                                     respect_not_next_to(GuestId, TableId, SeatId, TP, AllNotNextTo).
 
+/*
+--- SEAT AT SPECIFIC TABLE 
+*/
+get_specific_table_condictions_by_guest(GuestId, AllSpecificTable):- findall(TableId, (specific_table(Guests, TableId), member(GuestId, Guests)), AllSpecificTable).
+
+respect_specific_table(_, _, []):- !.
+respect_specific_table(GuestId, TableId, [SpecificTableId | AllSpecificTable_H]):- TableId = SpecificTableId,
+                                                                                   respect_specific_table(GuestId, TableId, AllSpecificTable_H).
+
+respect_specific_table(GuestId, TableId):- get_specific_table_condictions_by_guest(GuestId, AllSpecificTable),
+                                           respect_specific_table(GuestId, TableId, AllSpecificTable).
 
 /*
  --- SEAT GUESTs
 */
 
-seat_guest(GuestId, TP, seat(GuestId, TableId, SeatId)):- respect_next_to(GuestId, TableId, SeatId, TP),
+seat_guest(GuestId, TP, seat(GuestId, TableId, SeatId)):- respect_specific_table(GuestId, TableId),
+                                                          respect_next_to(GuestId, TableId, SeatId, TP),
                                                           respect_same_table(GuestId, TableId, TP),
                                                           respect_exclusive_table(GuestId, TableId, TP),
                                                           free_seat(TableId, SeatId, TP),
