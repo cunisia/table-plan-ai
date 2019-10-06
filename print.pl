@@ -33,7 +33,7 @@ print([[seat(GuestId, TableId, SeatId) | T2]|T]):- nl,
                                       write("---"), write(TableId), write("---"), 
                                       print_seats([seat(GuestId, TableId, SeatId) | T2]),
                                       print(T).
-print([]).
+print([]):- nl.
 
 print_table_plan(TP):- get_all_printable_table_plan(TP, PTPs), print(PTPs).
 
@@ -44,3 +44,12 @@ write_short_table_plan([seat(GuestId, TableId, SeatId) | T]):- guest_num(GuestI
                                                                write_short_table_plan(T). 
 
 print_short_table_plan(L):- nl, reverse(L, L1), write_short_table_plan(L1).
+
+get_json_seat(seat(GuestId, TableId, SeatId), JSON_Seat):- format(atom(JSON_Seat), '{"guestId": "~w", "tableId": "~w", "seatId": "~w"}', [GuestId, TableId, SeatId]).
+
+get_json_seats([], Acc, Acc):- !.
+get_json_seats([Seat | Seats], Acc, JSON_Seats):- get_json_seat(Seat, JSON_Seat), get_json_seats(Seats, [JSON_Seat | Acc], JSON_Seats).
+
+get_json_table_plan(TP, JSON_TP):- get_json_seats(TP, [], JSON_Seats), 
+                                   atomic_list_concat(JSON_Seats, ", ", JSON_Seats_Str), 
+                                   format(atom(JSON_TP), '[~w]', [JSON_Seats_Str]).
